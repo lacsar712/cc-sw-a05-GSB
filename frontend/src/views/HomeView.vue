@@ -7,7 +7,7 @@ const router = useRouter()
 const role = ref(localStorage.getItem('role') || '')
 const jobs = ref([])
 const err = ref('')
-const form = ref({ lamp: '', nominal_nm: 0.15, measured_nm: 0.15 })
+const form = ref({ lamp: '', nominal_nm: 0.15, measured_nm: 0.15, ambient_c: '' })
 let timer
 
 async function refresh() {
@@ -22,6 +22,11 @@ async function refresh() {
 
 async function submit() {
   err.value = ''
+  const t = form.value.ambient_c
+  if (t === '' || t === null || t === undefined || Number.isNaN(t)) {
+    err.value = '缺温：请填写环境温度（°C）后再提交'
+    return
+  }
   try {
     await api('/api/jobs', { method: 'POST', body: JSON.stringify(form.value) })
     await refresh()
@@ -50,12 +55,16 @@ onUnmounted(() => clearInterval(timer))
       <label>灯种 <input v-model="form.lamp" /></label>
       <label>标称 nm <input type="number" step="0.01" v-model.number="form.nominal_nm" /></label>
       <label>实测 nm <input type="number" step="0.01" v-model.number="form.measured_nm" /></label>
+      <label>环境温度 °C（必填） <input type="number" step="0.1" v-model.number="form.ambient_c" placeholder="如 24.5" required /></label>
       <button @click="submit">入队</button>
+      <p class="hint" style="color:#666; font-size:13px; margin:8px 0 0;">
+        环境温度为必填门禁项：缺温拒收；温度随单冻结，事后改温表不影响本单。已锁温度见菜单「温感台」。
+      </p>
     </section>
     <table border="1" cellpadding="6" style="border-collapse:collapse; width:100%;">
       <thead>
         <tr>
-          <th>编号</th><th>灯种</th><th>标称</th><th>实测</th><th>状态</th><th>结论</th><th>理由</th>
+          <th>编号</th><th>灯种</th><th>标称</th><th>实测</th><th>环境温度（°C）</th><th>状态</th><th>结论</th><th>理由</th>
         </tr>
       </thead>
       <tbody>
@@ -69,6 +78,7 @@ onUnmounted(() => clearInterval(timer))
           <td>{{ j.lamp }}</td>
           <td>{{ j.nominal_nm }}</td>
           <td>{{ j.measured_nm }}</td>
+          <td>{{ j.ambient_c ?? '—' }}</td>
           <td>{{ j.status }}</td>
           <td>{{ j.verdict }}</td>
           <td>{{ j.reason }}</td>
